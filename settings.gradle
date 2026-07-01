@@ -29,4 +29,3 @@ rootProject.name = "Billing Compat"
 include ':app'
 include ':core'
 include ':ui'
-include ':rank-my-tube'
