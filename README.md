@@ -7,7 +7,7 @@ A Secure Google Play Billing Wrapper for Android
 [![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg)](https://developer.android.com/studio/releases/platforms)
 [![Play Billing](https://img.shields.io/badge/Play%20Billing-9.x-orange.svg)](https://developer.android.com/google/play/billing/release-notes)
 
-BillingCompat wraps Google Play Billing Library 9.x with a clean builder API, multi-layered runtime security, and a server-side verification client ready to point at your own backend. Define your products, build the manager, launch a purchase — the parts that usually take a week of integration work are already done.
+BillingCompat wraps [Google Play Billing](https://developer.android.com/google/play/billing/release-notes) Library 9.x with a clean builder API, multi-layered runtime security, and a server-side verification client ready to point at your own backend. Define your products, build the manager, launch a purchase — the parts that usually take a week of integration work are already done.
 
 ## Why BillingCompat?
 
