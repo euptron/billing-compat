@@ -106,6 +106,10 @@ new PurchaseBuilder(activity, billingManager)
 
 Full setup, listener wiring, and integration details: [core README](core/README.md).
 
+> [!TIP]
+> ## Kotlin Usage
+> BillingCompat is written in Java and works with Kotlin out of the box. All APIs are fully compatible — just call them as you would any Java library from Kotlin.
+
 ## Modules
 
 BillingCompat is split into two independent modules. Use either on its own, or both together.
