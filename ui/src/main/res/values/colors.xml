@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ****************************************************************************
+    PAYWALL COLOR TOKENS — LIGHT (OPTIMIZED CLARITY +38% TOTAL)
+    ****************************************************************************
+-->
+<resources>
+    <!-- Primary: Ultimate Charcoal -->
+    <color name="paywall_primary">#0A0A0A</color>
+    <color name="paywall_on_primary">#FFFFFF</color>
+
+    <!-- Secondary: Botanical Teal-Green -->
+    <color name="paywall_secondary">#16A34A</color>
+    <color name="paywall_on_secondary">#FFFFFF</color>
+
+    <!-- Surfaces & Text -->
+    <color name="paywall_surface">#F5F5F7</color>
+    <color name="paywall_on_surface">#171717</color>
+    <color name="paywall_on_surface_variant">#737373</color>
+
+    <!-- Background -->
+    <color name="paywall_background">#FFFFFF</color>
+    <color name="paywall_on_background">#0A0A0A</color>
+
+    <!-- Discount Chip: The "Goldilocks" Opacity -->
+    <!-- 38% Opacity (61) — Solid presence, high readability -->
+    <color name="paywall_discount_chip_background">#2622C55E</color>
+    <!-- 93% Opacity (ED) — Sharp, defined edge for maximum clarity -->
+    <color name="paywall_discount_chip_stroke">#ED22C55E</color>
+
+    <color name="paywall_scrim_start">#FFFFFFFF</color>
+    <color name="paywall_scrim_end">#00FFFFFF</color>
+</resources>

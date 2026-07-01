@@ -1,0 +1,26 @@
+<resources>
+    <!-- Primary: Soft Silver -->
+    <color name="paywall_primary">#E5E5E5</color>
+    <color name="paywall_on_primary">#0A0A0A</color>
+
+    <!-- Secondary: Botanical Teal-Green (Brightened) -->
+    <color name="paywall_secondary">#22C55E</color>
+    <!-- Dark text on green for maximum readability -->
+    <color name="paywall_on_secondary">#052E16</color>
+
+    <!-- Surfaces & Text -->
+    <color name="paywall_surface">#121212</color>
+    <color name="paywall_on_surface">#D4D4D4</color>
+    <color name="paywall_on_surface_variant">#838383</color>
+
+    <!-- Background: Pure OLED Black -->
+    <color name="paywall_background">#000000</color>
+    <color name="paywall_on_background">#E5E5E5</color>
+
+    <!-- Discount Chip: Alpha blends of #22C55E -->
+    <color name="paywall_discount_chip_background">#2622C55E</color>
+    <color name="paywall_discount_chip_stroke">#22C55E</color>
+
+    <color name="paywall_scrim_start">#FF000000</color>
+    <color name="paywall_scrim_end">#00000000</color>
+</resources>

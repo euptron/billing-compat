@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Top bar cancel button label -->
+    <string name="paywall_cancel">Cancel</string>
+    <!-- "Choose your plan" section label -->
+    <string name="paywall_choose_plan">Choose your plan</string>
+    <!-- "Most Popular" recommended badge -->
+    <string name="paywall_most_popular">Most Popular</string>
+    <!-- Hero image content description for accessibility -->
+    <string name="paywall_hero_content_description">Subscription hero image</string>
+</resources>

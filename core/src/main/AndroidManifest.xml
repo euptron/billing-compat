@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+     We do NOT use <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+     because Google Play restricts it to core security/file/browser apps.
+
+     Instead, we use <queries> to target only specific known patcher and root app
+     package names. This is fully compliant and requires no Play Store declaration.
+    -->
+
+    <queries>
+        <!-- Lucky Patcher variants -->
+        <package android:name="com.chelpus.lackypatch" />
+        <package android:name="com.chelpus.luckypatcher" />
+        <package android:name="ru.wiabfaoi.llxyigdym" />
+        <package android:name="com.dimonvideo.luckypatcher" />
+        <package android:name="com.forpda.lp" />
+        <package android:name="com.android.vending.billing.InAppBillingService.LUCK" />
+        <package android:name="com.android.vending.billing.InAppBillingService.LOCK" />
+
+        <!-- Game Guardian -->
+        <package android:name="org.cheatengine.cegui" />
+        <package android:name="org.cheatengine.cegui.x86" />
+        <package android:name="org.cheatengine.cegui.x64" />
+        <package android:name="catch_.me_.if_.you_.can_" />
+
+        <!-- Freedom / iAP Cracker equivalents -->
+        <package android:name="cc.madkite.freedom" />
+        <package android:name="jase.freedom" />
+
+        <!-- Uret Patcher -->
+        <package android:name="uret.jasi2169.patcher" />
+        <package android:name="com.appsara.app" />
+
+        <!-- SB Game Hacker -->
+        <package android:name="com.SBGameHacker" />
+        <package android:name="com.sbgamehacker" />
+
+        <!-- HappyMod -->
+        <package android:name="com.happymod.app" />
+
+        <!-- Parallel Space (used to clone and patch) -->
+        <package android:name="com.lbe.parallel.intl" />
+
+        <!-- Root management apps -->
+        <package android:name="com.topjohnwu.magisk" />
+        <package android:name="com.koushikdutta.superuser" />
+        <package android:name="eu.chainfire.supersu" />
+        <package android:name="com.noshufou.android.su" />
+        <package android:name="com.thirdparty.superuser" />
+        <package android:name="com.yellowes.su" />
+    </queries>
+</manifest>

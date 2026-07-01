@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Full-screen dialog theme -->
+    <style name="PaywallDialogTheme" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@color/paywall_background</item>
+        <item name="android:statusBarColor">@color/paywall_background</item>
+        <item name="android:navigationBarColor">@color/paywall_background</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+    </style>
+
+    <!--
+        Slide-up / slide-down animation for the dialog.
+        Override in your app if you prefer fade or other transitions.
+    -->
+    <style name="PaywallDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/paywall_slide_up</item>
+        <item name="android:windowExitAnimation">@anim/paywall_slide_down</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.Paywall.Close.Button" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+</resources>

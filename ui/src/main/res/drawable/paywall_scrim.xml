@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Top bar scrim for the Paywall screen.
+  ~ Provides a linear gradient transition from the solid background color to transparency,
+  ~ creating a visual "floating" effect for the toolbar as content scrolls underneath.
+  ~ The height of the view using this drawable should typically align with the combined
+  ~ height of the status bar and the standard action bar (e.g., 56dp + insets).
+  ~
+  ~ @color/paywall_scrim_start - Solid color at the top of the gradient (opaque)
+  ~ @color/paywall_scrim_end   - Transparent color at the bottom of the gradient
+  ~
+  ~ @see https://developer.android.com/guide/topics/resources/drawable-resource#Shape
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:endColor="@color/paywall_scrim_end"
+        android:startColor="@color/paywall_scrim_start"
+        android:type="linear" />
+</shape>

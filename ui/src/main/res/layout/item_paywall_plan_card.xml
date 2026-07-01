@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/plan_card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="4dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginEnd="4dp"
+    android:layout_marginBottom="6dp"
+    app:cardBackgroundColor="@color/paywall_surface"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/plan_recommended_chip"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/paywall_most_popular"
+            android:textColor="@color/paywall_on_primary"
+            android:visibility="gone"
+            app:chipBackgroundColor="@color/paywall_primary" />
+
+        <TextView
+            android:id="@+id/plan_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textColor="@color/paywall_on_surface"
+            android:textStyle="bold" />
+
+        <!-- Price e.g. "$9.99" -->
+        <TextView
+            android:id="@+id/plan_price"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="2dp"
+            android:textAppearance="?attr/textAppearanceHeadline5"
+            android:textColor="@color/paywall_on_surface"
+            android:textStyle="bold" />
+
+        <!-- Period e.g. "/ month" -->
+        <TextView
+            android:id="@+id/plan_period"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="@color/paywall_on_surface_variant" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/plan_discount_chip"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="24dp"
+            android:textColor="@color/paywall_discount_chip_stroke"
+            android:textSize="11sp"
+            android:visibility="gone"
+            app:chipBackgroundColor="@color/paywall_discount_chip_background"
+            app:chipEndPadding="6dp"
+            app:chipIconVisible="false"
+            app:chipMinTouchTargetSize="0dp"
+            app:chipStartPadding="6dp"
+            app:chipStrokeColor="@color/paywall_discount_chip_stroke"
+            app:chipStrokeWidth="1dp"
+            app:ensureMinTouchTargetSize="false" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

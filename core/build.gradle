@@ -1,0 +1,87 @@
+plugins {
+    alias(libs.plugins.android.library)
+    id 'maven-publish'
+}
+
+android {
+    namespace 'com.euptron.billingcompat.core'
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
+
+    defaultConfig {
+        minSdk 23
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    publishing {
+        singleVariant("release")
+    }
+}
+
+dependencies {
+    implementation libs.billing
+    implementation libs.annotation
+
+    testImplementation libs.core
+    testImplementation libs.junit
+    androidTestImplementation libs.espresso.core
+    androidTestImplementation libs.ext.junit
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.github.euptron'
+                artifactId = 'billingcompat-core'
+                version = '0.0.1'
+
+                pom {
+                    name = 'Billing Compat UI'
+                    description = ' A Secure Google Play Billing Wrapper for Android'
+                    url = 'https://github.com/euptron/Billing-Compat'
+
+                    licenses {
+                        license {
+                            name = 'MIT'
+                            url = 'https://github.com/euptron/Billing-Compat/blob/main/LICENSE'
+                            distribution = 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'euptron'
+                            name = 'Etido Peter'
+                            email = 'euptron@gmail.com'
+                        }
+                    }
+
+                    scm {
+                        connection = 'scm:git:github.com/euptron/Billing-Compat.git'
+                        developerConnection = 'scm:git:ssh://github.com/euptron/Billing-Compat.git'
+                        url = 'https://github.com/euptron/Billing-Compat'
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = "https://maven.pkg.github.com/euptron/Billing-Compat"
+            }
+        }
+    }
+}

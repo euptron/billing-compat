@@ -1,0 +1,85 @@
+plugins {
+    alias(libs.plugins.android.library)
+    id 'maven-publish'
+}
+
+android {
+    namespace 'com.euptron.billingcompat.ui'
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
+
+    defaultConfig {
+        minSdk 21
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    publishing {
+        singleVariant("release")
+    }
+}
+
+dependencies {
+    implementation libs.appcompat
+    implementation libs.material
+    testImplementation libs.junit
+    androidTestImplementation libs.espresso.core
+    androidTestImplementation libs.ext.junit
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.github.euptron'
+                artifactId = 'billingcompat-ui'
+                version = '0.0.1'
+
+                pom {
+                    name = 'Billing Compat UI'
+                    description = 'A standalone, fully themeable paywall `DialogFragment` for Android. Displays a subscription plan selection screen with hero imagery, feature highlights, and plan cards. Contains zero billing logic — all purchase actions are delegated to the caller via a callback interface, making it compatible with any billing backend.'
+                    url = 'https://github.com/euptron/Billing-Compat'
+
+                    licenses {
+                        license {
+                            name = 'MIT'
+                            url = 'https://github.com/euptron/Billing-Compat/blob/main/LICENSE'
+                            distribution = 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'euptron'
+                            name = 'Etido Peter'
+                            email = 'euptron@gmail.com'
+                        }
+                    }
+
+                    scm {
+                        connection = 'scm:git:github.com/euptron/Billing-Compat.git'
+                        developerConnection = 'scm:git:ssh://github.com/euptron/Billing-Compat.git'
+                        url = 'https://github.com/euptron/Billing-Compat'
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = "https://maven.pkg.github.com/euptron/Billing-Compat"
+            }
+        }
+    }
+}
