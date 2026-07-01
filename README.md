@@ -2,7 +2,7 @@
 
 A Secure Google Play Billing Wrapper for Android
 
-[![JitPack](https://jitpack.io/v/euptron/Billing-Compat.svg)](https://jitpack.io/#euptron/Billing-Compat)
+[![JitPack](https://jitpack.io/v/euptron/billing-compat.svg)](https://jitpack.io/#euptron/billing-compat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg)](https://developer.android.com/studio/releases/platforms)
 [![Play Billing](https://img.shields.io/badge/Play%20Billing-9.x-orange.svg)](https://developer.android.com/google/play/billing/release-notes)
