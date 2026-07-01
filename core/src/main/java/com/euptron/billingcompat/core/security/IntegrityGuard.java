@@ -3,6 +3,7 @@ package com.euptron.billingcompat.core.security;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -475,30 +476,33 @@ public final class IntegrityGuard {
   }
 
   private static void showViolationDialog(Activity activity, ViolationType type) {
-    activity.runOnUiThread(
-        () -> {
-          String message = buildMessage(type);
-          new android.app.AlertDialog.Builder(activity)
-              .setTitle("Security Error")
-              .setMessage(message)
-              .setCancelable(false)
-              .setPositiveButton(
-                  "Download from Play Store",
-                  (dialog, which) -> {
+    activity.runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        String message = buildMessage(type);
+        new android.app.AlertDialog.Builder(activity)
+                .setTitle("Security Error")
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton("Download from Play Store", new DialogInterface.OnClickListener() {
+                  @Override
+                  public void onClick(DialogInterface dialog, int which) {
                     try {
                       activity.startActivity(
-                          new android.content.Intent(
-                              android.content.Intent.ACTION_VIEW,
-                              android.net.Uri.parse(
-                                  "market://details?id=" + activity.getPackageName())));
+                              new android.content.Intent(
+                                      android.content.Intent.ACTION_VIEW,
+                                      android.net.Uri.parse(
+                                              "market://details?id=" + activity.getPackageName())));
                     } catch (Exception ignored) {
                       // ignored
                     }
                     activity.finishAffinity();
                     System.exit(0);
-                  })
-              .show();
-        });
+                  }
+                })
+                .show();
+      }
+    });
   }
 
   private static String buildMessage(ViolationType type) {

@@ -15,6 +15,7 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -26,6 +27,7 @@ import com.euptron.billingcompat.ui.R;
 import com.euptron.billingcompat.ui.adapter.PaywallAdapter;
 import com.euptron.billingcompat.ui.model.PaywallCallback;
 import com.euptron.billingcompat.ui.model.PaywallConfig;
+import com.euptron.billingcompat.ui.model.SubscriptionPlanUiModel;
 import com.google.android.material.button.MaterialButton;
 
 /**
@@ -105,12 +107,12 @@ public class PaywallDialog extends DialogFragment {
                   | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
     }
 
-
     View decorView = window.getDecorView();
     WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, decorView);
-    
-    boolean isLight = (getResources().getConfiguration().uiMode
-            & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES;
+
+    boolean isLight =
+        (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+            != Configuration.UI_MODE_NIGHT_YES;
 
     controller.setAppearanceLightStatusBars(isLight);
     controller.setAppearanceLightNavigationBars(isLight);
@@ -139,21 +141,40 @@ public class PaywallDialog extends DialogFragment {
     MaterialButton cancelButton = view.findViewById(R.id.paywall_cancel_button);
     RecyclerView recyclerView = view.findViewById(R.id.paywall_recycler_view);
 
-    cancelButton.setOnClickListener(v -> dismiss());
+    cancelButton.setOnClickListener(
+        new View.OnClickListener() {
+          @Override
+          public void onClick(View view) {
+            dismiss();
+          }
+        });
     appNameView.setText(config.getAppName());
 
     recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-    PaywallAdapter adapter = new PaywallAdapter(config);
-    adapter.setOnSubscribeClickListener(
-        plan -> {
-          if (callback != null) callback.onSubscribeClicked(plan);
-        });
-    adapter.setOnRestoreClickListener(
-        () -> {
-          if (callback != null) callback.onRestoreClicked();
-        });
+    PaywallAdapter adapter = getPaywallAdapter();
     recyclerView.setAdapter(adapter);
     if (isHostActivityEdgeToEdge()) applyInsets(view);
+  }
+
+  @NonNull
+  private PaywallAdapter getPaywallAdapter() {
+    PaywallAdapter adapter = new PaywallAdapter(config);
+
+    adapter.setOnSubscribeClickListener(
+        new PaywallAdapter.OnSubscribeClickListener() {
+          @Override
+          public void onSubscribeClicked(SubscriptionPlanUiModel plan) {
+            if (callback != null) callback.onSubscribeClicked(plan);
+          }
+        });
+    adapter.setOnRestoreClickListener(
+        new PaywallAdapter.OnRestoreClickListener() {
+          @Override
+          public void onRestoreClicked() {
+            if (callback != null) callback.onRestoreClicked();
+          }
+        });
+    return adapter;
   }
 
   @Override
@@ -195,15 +216,20 @@ public class PaywallDialog extends DialogFragment {
 
     ViewCompat.setOnApplyWindowInsetsListener(
         view,
-        (v, windowInsets) -> {
-          Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-          v.setPadding(
-              initialLeft + insets.left,
-              initialTop + insets.top,
-              initialRight + insets.right,
-              initialBottom);
+        new OnApplyWindowInsetsListener() {
+          @Override
+          public @org.jspecify.annotations.NonNull WindowInsetsCompat onApplyWindowInsets(
+              @org.jspecify.annotations.NonNull View v,
+              @org.jspecify.annotations.NonNull WindowInsetsCompat windowInsets) {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(
+                initialLeft + insets.left,
+                initialTop + insets.top,
+                initialRight + insets.right,
+                initialBottom);
 
-          return WindowInsetsCompat.CONSUMED;
+            return WindowInsetsCompat.CONSUMED;
+          }
         });
 
     // Trigger inset dispatch immediately in case the view is already attached.

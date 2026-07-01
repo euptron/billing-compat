@@ -2,13 +2,18 @@ package com.euptron.billingcompat.core.handlers;
 
 import android.content.Context;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.ConsumeResponseListener;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
 import com.euptron.billingcompat.core.products.ConsumableProduct;
 import com.euptron.billingcompat.core.utils.Compatibility;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ConsumableHandler extends BaseProductHandler<ConsumableProduct> {
@@ -65,53 +70,57 @@ public class ConsumableHandler extends BaseProductHandler<ConsumableProduct> {
     QueryPurchasesParams params =
         QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build();
 
-    billingClient.queryPurchasesAsync(
-        params,
-        (result, purchases) -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            for (Purchase purchase : purchases) {
-              if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                // Consumables should be consumed, but if they weren't, consume them
-                for (String productId : purchase.getProducts()) {
-                  ConsumableProduct product = getProduct(productId);
-                  if (product != null) {
-                    consumePurchase(product, purchase);
-                  }
+    
+    billingClient.queryPurchasesAsync(params, new PurchasesResponseListener() {
+      @Override
+      public void onQueryPurchasesResponse(@NonNull BillingResult result, @NonNull List<Purchase> purchases) {
+        if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+          for (Purchase purchase : purchases) {
+            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+              // Consumables should be consumed, but if they weren't, consume them
+              for (String productId : purchase.getProducts()) {
+                ConsumableProduct product = getProduct(productId);
+                if (product != null) {
+                  consumePurchase(product, purchase);
                 }
               }
             }
-            Log.d(TAG, "Synced consumables");
           }
-        });
+          Log.d(TAG, "Synced consumables");
+        }
+      }
+    });
   }
 
   private void consumePurchase(ConsumableProduct product, Purchase purchase) {
     ConsumeParams params =
         ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build();
 
-    billingClient.consumeAsync(
-        params,
-        (result, purchaseToken) -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            // Add to balance
-            int currentBalance = Compatibility.getOrDefault(balances, product.getId(), 0);
-            int newBalance = currentBalance + product.getQuantity();
-            balances.put(product.getId(), newBalance);
-            saveBalance(product.getId(), newBalance);
+    billingClient.consumeAsync(params, new ConsumeResponseListener() {
+      @Override
+      public void onConsumeResponse(@NonNull BillingResult result, @NonNull String purchaseToken) {
+        if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+          // Add to balance
+          int currentBalance = Compatibility.getOrDefault(balances, product.getId(), 0);
+          int newBalance = currentBalance + product.getQuantity();
+          balances.put(product.getId(), newBalance);
+          saveBalance(product.getId(), newBalance);
 
-            Log.d(TAG, "Consumed successfully. New balance: " + newBalance);
+          Log.d(TAG, "Consumed successfully. New balance: " + newBalance);
 
-            if (listener != null) {
-              listener.onProductPurchased(product, purchaseToken);
-            }
-          } else {
-            Log.e(TAG, "Consumption failed: " + result.getDebugMessage());
-            if (listener != null) {
-              listener.onPurchaseError("Consumption failed: " + result.getDebugMessage(), product);
-            }
+          if (listener != null) {
+            listener.onProductPurchased(product, purchaseToken);
           }
-        });
+        } else {
+          Log.e(TAG, "Consumption failed: " + result.getDebugMessage());
+          if (listener != null) {
+            listener.onPurchaseError("Consumption failed: " + result.getDebugMessage(), product);
+          }
+        }
+      }
+    });
   }
+
 
   public int getBalance(ConsumableProduct product) {
     return Compatibility.getOrDefault(balances, product.getId(), 0);

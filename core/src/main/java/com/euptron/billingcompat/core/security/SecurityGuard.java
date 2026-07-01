@@ -2,6 +2,7 @@ package com.euptron.billingcompat.core.security;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
@@ -137,7 +138,9 @@ public class SecurityGuard {
 
   private static void showSignatureViolation(Activity activity) {
     activity.runOnUiThread(
-        () ->
+        new Runnable() {
+          @Override
+          public void run() {
             new android.app.AlertDialog.Builder(activity)
                 .setTitle("Security Violation")
                 .setMessage(
@@ -147,19 +150,24 @@ public class SecurityGuard {
                 .setCancelable(false)
                 .setPositiveButton(
                     "Go to Play Store",
-                    (dialog, which) -> {
-                      try {
-                        activity.startActivity(
-                            new android.content.Intent(
-                                android.content.Intent.ACTION_VIEW,
-                                android.net.Uri.parse(
-                                    "market://details?id=" + activity.getPackageName())));
-                      } catch (Exception ignored) {
-                        // No-Op
+                    new DialogInterface.OnClickListener() {
+                      @Override
+                      public void onClick(DialogInterface dialogInterface, int i) {
+                        try {
+                          activity.startActivity(
+                              new android.content.Intent(
+                                  android.content.Intent.ACTION_VIEW,
+                                  android.net.Uri.parse(
+                                      "market://details?id=" + activity.getPackageName())));
+                        } catch (Exception ignored) {
+                          // No-Op
+                        }
+                        activity.finishAffinity();
+                        System.exit(0);
                       }
-                      activity.finishAffinity();
-                      System.exit(0);
                     })
-                .show());
+                .show();
+          }
+        });
   }
 }

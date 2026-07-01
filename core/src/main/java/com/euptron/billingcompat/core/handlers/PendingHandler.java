@@ -2,11 +2,15 @@ package com.euptron.billingcompat.core.handlers;
 
 import android.content.Context;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
 import com.euptron.billingcompat.core.products.Purchasable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PendingHandler extends BaseProductHandler<Purchasable> {
@@ -68,27 +72,28 @@ public class PendingHandler extends BaseProductHandler<Purchasable> {
 
     QueryPurchasesParams params =
         QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build();
+    
+    billingClient.queryPurchasesAsync(params, new PurchasesResponseListener() {
+      @Override
+      public void onQueryPurchasesResponse(@NonNull BillingResult result, @NonNull List<Purchase> purchases) {
+        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) return;
 
-    billingClient.queryPurchasesAsync(
-        params,
-        (result, purchases) -> {
-          if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) return;
+        for (Purchase purchase : purchases) {
+          if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            // Was pending, now completed — remove from pending map and notify
+            pendingPurchases.remove(purchase.getOrderId());
+            pendingSince.remove(purchase.getOrderId());
 
-          for (Purchase purchase : purchases) {
-            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-              // Was pending, now completed — remove from pending map and notify
-              pendingPurchases.remove(purchase.getOrderId());
-              pendingSince.remove(purchase.getOrderId());
-
-              for (String productId : purchase.getProducts()) {
-                Purchasable product = getProduct(productId);
-                if (product != null && listener != null) {
-                  listener.onProductPurchased(product, purchase.getPurchaseToken());
-                }
+            for (String productId : purchase.getProducts()) {
+              Purchasable product = getProduct(productId);
+              if (product != null && listener != null) {
+                listener.onProductPurchased(product, purchase.getPurchaseToken());
               }
             }
           }
-        });
+        }
+      }
+    });
   }
 
   public boolean hasPendingPurchases() {

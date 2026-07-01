@@ -2,8 +2,13 @@ package com.euptron.billingcompat.core.handlers;
 
 import android.content.Context;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+
 import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
 import com.euptron.billingcompat.core.model.SubscriptionPlan;
 import com.euptron.billingcompat.core.products.SubscriptionProduct;
@@ -11,6 +16,7 @@ import com.euptron.billingcompat.core.utils.Compatibility;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.json.JSONObject;
 
@@ -83,27 +89,31 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
 
     billingClient.queryPurchasesAsync(
         params,
-        (result, purchases) -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            activeSubscriptions.clear();
-            for (Purchase purchase : purchases) {
-              if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                for (String productId : purchase.getProducts()) {
-                  SubscriptionPlan plan = SubscriptionPlan.fromProductId(productId);
-                  if (plan != null) {
-                    activeSubscriptions.put(plan, purchase);
-                    long expiry = parseExpiryTime(purchase, plan);
-                    expiryTimes.put(plan, expiry);
-                    saveLong(plan.name() + "_expiry", expiry);
-                    saveBoolean(plan.name() + "_active", true);
+        new PurchasesResponseListener() {
+          @Override
+          public void onQueryPurchasesResponse(
+              @NonNull BillingResult result, @NonNull List<Purchase> purchases) {
+            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+              activeSubscriptions.clear();
+              for (Purchase purchase : purchases) {
+                if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                  for (String productId : purchase.getProducts()) {
+                    SubscriptionPlan plan = SubscriptionPlan.fromProductId(productId);
+                    if (plan != null) {
+                      activeSubscriptions.put(plan, purchase);
+                      long expiry = parseExpiryTime(purchase, plan);
+                      expiryTimes.put(plan, expiry);
+                      saveLong(plan.name() + "_expiry", expiry);
+                      saveBoolean(plan.name() + "_active", true);
+                    }
                   }
                 }
               }
-            }
-            Log.d(TAG, "Synced " + activeSubscriptions.size() + " subscriptions");
+              Log.d(TAG, "Synced " + activeSubscriptions.size() + " subscriptions");
 
-            if (listener != null) {
-              listener.onPurchasesSynced();
+              if (listener != null) {
+                listener.onPurchasesSynced();
+              }
             }
           }
         });
@@ -116,7 +126,8 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
   public boolean isActive(SubscriptionPlan plan) {
     long serverExpiry = getLong(plan.name() + KEY_SERVER_EXPIRY, 0);
     // Prefer server-confirmed expiry over locally calculated one
-    long expiry = serverExpiry > 0 ? serverExpiry : Compatibility.getOrDefault(expiryTimes, plan, 0L);
+    long expiry =
+        serverExpiry > 0 ? serverExpiry : Compatibility.getOrDefault(expiryTimes, plan, 0L);
     return System.currentTimeMillis() < expiry;
   }
 
@@ -161,9 +172,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
     return localExpiry;
   }
 
-  /**
-   * Get SubscriptionPlan from product ID
-   */
+  /** Get SubscriptionPlan from product ID */
   public SubscriptionPlan getPlanFromProductId(String productId) {
     for (SubscriptionPlan plan : SubscriptionPlan.values()) {
       if (plan.getProductId().equals(productId)) {

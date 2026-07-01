@@ -1,6 +1,7 @@
 package com.euptron.billingcompat.core.security;
 
 import android.util.Log;
+import androidx.annotation.NonNull;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -16,8 +17,8 @@ import org.json.JSONObject;
  *
  * <p>This class manages asynchronous communication with a backend server to validate purchase
  * tokens. It handles network requests on a background thread and provides callbacks for
- * verification results, helping to prevent fraudulent transactions by offloading validation
- * logic to a secure environment.
+ * verification results, helping to prevent fraudulent transactions by offloading validation logic
+ * to a secure environment.
  */
 public class SSVClient {
   private static final String TAG = "SSVClient";
@@ -31,6 +32,7 @@ public class SSVClient {
 
   public interface Callback {
     void onVerified(boolean isValid, long expiryMillis, boolean autoRenewing);
+
     void onError(String error);
   }
 
@@ -45,21 +47,29 @@ public class SSVClient {
    * @return Future<?> for cancellation if needed
    */
   public Future<?> verifyPurchase(
-          String productId, String purchaseToken, String packageName, boolean isSubscription, Callback callback) {
+      String productId,
+      String purchaseToken,
+      String packageName,
+      boolean isSubscription,
+      Callback callback) {
     return executor.submit(
-            () -> {
-              try {
-                VerificationResult result = doVerification(productId, purchaseToken, packageName, isSubscription);
-                if (callback != null) {
-                  callback.onVerified(result.valid, result.expiryMillis, result.autoRenewing);
-                }
-              } catch (Exception e) {
-                Log.e(TAG, "Verification error", e);
-                if (callback != null) {
-                  callback.onError(e.getMessage());
-                }
+        new Runnable() {
+          @Override
+          public void run() {
+            try {
+              VerificationResult result =
+                  doVerification(productId, purchaseToken, packageName, isSubscription);
+              if (callback != null) {
+                callback.onVerified(result.valid, result.expiryMillis, result.autoRenewing);
               }
-            });
+            } catch (Exception e) {
+              Log.e(TAG, "Verification error", e);
+              if (callback != null) {
+                callback.onError(e.getMessage());
+              }
+            }
+          }
+        });
   }
 
   /**
@@ -68,59 +78,88 @@ public class SSVClient {
    * @param timeoutMillis Timeout in milliseconds
    */
   public Future<?> verifyPurchase(
-          String productId,
-          String purchaseToken,
-          String packageName,
-          boolean isSubscription,
-          Callback callback,
-          long timeoutMillis) {
+      String productId,
+      String purchaseToken,
+      String packageName,
+      boolean isSubscription,
+      Callback callback,
+      long timeoutMillis) {
     return executor.submit(
-            () -> {
-              try {
-                final VerificationResult[] result = new VerificationResult[1];
-                final Exception[] error = new Exception[1];
+        new Runnable() {
+          @Override
+          public void run() {
+            try {
+              final VerificationResult[] result = new VerificationResult[1];
+              final Exception[] error = new Exception[1];
 
-                Thread worker =
-                        new Thread(
-                                () -> {
-                                  try {
-                                    result[0] = doVerification(productId, purchaseToken, packageName, isSubscription);
-                                  } catch (Exception e) {
-                                    error[0] = e;
-                                  }
-                                });
+              Thread worker =
+                  getThread(
+                      result,
+                      error,
+                      productId,
+                      purchaseToken,
+                      packageName,
+                      isSubscription,
+                      timeoutMillis);
 
-                worker.start();
-                worker.join(timeoutMillis);
-
-                if (worker.isAlive()) {
-                  worker.interrupt();
-                  if (callback != null) {
-                    callback.onError("Verification timeout");
-                  }
-                } else if (error[0] != null) {
-                  if (callback != null) {
-                    callback.onError(error[0].getMessage());
-                  }
-                } else {
-                  if (callback != null) {
-                    callback.onVerified(result[0].valid, result[0].expiryMillis, result[0].autoRenewing);
-                  }
-                }
-
-              } catch (Exception e) {
-                Log.e(TAG, "Verification error", e);
+              if (worker.isAlive()) {
+                worker.interrupt();
                 if (callback != null) {
-                  callback.onError(e.getMessage());
+                  callback.onError("Verification timeout");
+                }
+              } else if (error[0] != null) {
+                if (callback != null) {
+                  callback.onError(error[0].getMessage());
+                }
+              } else {
+                if (callback != null) {
+                  callback.onVerified(
+                      result[0].valid, result[0].expiryMillis, result[0].autoRenewing);
+                }
+              }
+
+            } catch (Exception e) {
+              Log.e(TAG, "Verification error", e);
+              if (callback != null) {
+                callback.onError(e.getMessage());
+              }
+            }
+          }
+        });
+  }
+
+  @NonNull
+  private Thread getThread(
+      VerificationResult[] result,
+      Exception[] error,
+      String productId,
+      String purchaseToken,
+      String packageName,
+      boolean isSubscription,
+      long timeoutMillis)
+      throws InterruptedException {
+    Thread worker =
+        new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  result[0] = doVerification(productId, purchaseToken, packageName, isSubscription);
+                } catch (Exception e) {
+                  error[0] = e;
                 }
               }
             });
+
+    worker.start();
+    worker.join(timeoutMillis);
+    return worker;
   }
 
   /** Actual verification logic (runs on background thread) */
   private VerificationResult doVerification(
-          String productId, String purchaseToken, String packageName, boolean isSubscription)
-          throws Exception {
+      String productId, String purchaseToken, String packageName, boolean isSubscription)
+      throws Exception {
     HttpURLConnection connection = null;
     try {
       JSONObject payload = new JSONObject();
@@ -145,7 +184,7 @@ public class SSVClient {
       int responseCode = connection.getResponseCode();
       if (responseCode == HttpURLConnection.HTTP_OK) {
         try (BufferedReader reader =
-                     new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
           StringBuilder response = new StringBuilder();
           String line;
           while ((line = reader.readLine()) != null) {
@@ -161,7 +200,7 @@ public class SSVClient {
         }
       } else {
         try (BufferedReader reader =
-                     new BufferedReader(new InputStreamReader(connection.getErrorStream()))) {
+            new BufferedReader(new InputStreamReader(connection.getErrorStream()))) {
           StringBuilder error = new StringBuilder();
           String line;
           while ((line = reader.readLine()) != null) {

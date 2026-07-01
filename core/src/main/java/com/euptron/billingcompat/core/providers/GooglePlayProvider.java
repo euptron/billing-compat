@@ -6,16 +6,21 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.android.billingclient.api.AcknowledgePurchaseParams;
+import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.ConsumeResponseListener;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
+import com.android.billingclient.api.ProductDetailsResponseListener;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryProductDetailsResult;
 import com.android.billingclient.api.QueryPurchasesParams;
 import com.euptron.billingcompat.core.handlers.ProductHandler;
 import com.euptron.billingcompat.core.listeners.BillingConnectionListener;
@@ -179,54 +184,65 @@ public class GooglePlayProvider implements PaymentProvider, PurchasesUpdatedList
 
         billingClient.queryPurchasesAsync(
             queryParams,
-            (result, purchases) -> {
-              if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                Log.e(TAG, "Failed to query purchases for upgrade");
-                return;
-              }
-
-              String oldPurchaseToken = null;
-              for (Purchase purchase : purchases) {
-                if (purchase.getProducts().contains(oldSku)) {
-                  oldPurchaseToken = purchase.getPurchaseToken();
-                  break;
+            new PurchasesResponseListener() {
+              @Override
+              public void onQueryPurchasesResponse(
+                  @NonNull BillingResult result, @NonNull List<Purchase> purchases) {
+                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                  Log.e(TAG, "Failed to query purchases for upgrade");
+                  return;
                 }
+
+                String oldPurchaseToken = null;
+                for (Purchase purchase : purchases) {
+                  if (purchase.getProducts().contains(oldSku)) {
+                    oldPurchaseToken = purchase.getPurchaseToken();
+                    break;
+                  }
+                }
+
+                if (oldPurchaseToken == null) {
+                  Log.e(TAG, "Old purchase token not found for: " + oldSku);
+                  return;
+                }
+
+                // New non-deprecated API — replacement params set on ProductDetailsParams
+                BillingFlowParams.ProductDetailsParams productDetailsParams =
+                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                        .setProductDetails(details)
+                        .setOfferToken(finalOfferToken)
+                        .setSubscriptionProductReplacementParams(
+                            BillingFlowParams.ProductDetailsParams
+                                .SubscriptionProductReplacementParams.newBuilder()
+                                .setOldProductId(oldSku)
+                                .setReplacementMode(
+                                    BillingFlowParams.ProductDetailsParams
+                                        .SubscriptionProductReplacementParams.ReplacementMode
+                                        .CHARGE_PRORATED_PRICE)
+                                .build())
+                        .build();
+
+                // SubscriptionUpdateParams still needed for oldPurchaseToken
+                BillingFlowParams.SubscriptionUpdateParams updateParams =
+                    BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                        .setOldPurchaseToken(oldPurchaseToken)
+                        .build();
+
+                BillingFlowParams flowParams =
+                    BillingFlowParams.newBuilder()
+                        .setProductDetailsParamsList(
+                            Collections.singletonList(productDetailsParams))
+                        .setSubscriptionUpdateParams(updateParams)
+                        .build();
+
+                activity.runOnUiThread(
+                    new Runnable() {
+                      @Override
+                      public void run() {
+                        billingClient.launchBillingFlow(activity, flowParams);
+                      }
+                    });
               }
-
-              if (oldPurchaseToken == null) {
-                Log.e(TAG, "Old purchase token not found for: " + oldSku);
-                return;
-              }
-
-              // New non-deprecated API — replacement params set on ProductDetailsParams
-              BillingFlowParams.ProductDetailsParams productDetailsParams =
-                  BillingFlowParams.ProductDetailsParams.newBuilder()
-                      .setProductDetails(details)
-                      .setOfferToken(finalOfferToken)
-                      .setSubscriptionProductReplacementParams(
-                          BillingFlowParams.ProductDetailsParams
-                              .SubscriptionProductReplacementParams.newBuilder()
-                              .setOldProductId(oldSku)
-                              .setReplacementMode(
-                                  BillingFlowParams.ProductDetailsParams
-                                      .SubscriptionProductReplacementParams.ReplacementMode
-                                      .CHARGE_PRORATED_PRICE)
-                              .build())
-                      .build();
-
-              // SubscriptionUpdateParams still needed for oldPurchaseToken
-              BillingFlowParams.SubscriptionUpdateParams updateParams =
-                  BillingFlowParams.SubscriptionUpdateParams.newBuilder()
-                      .setOldPurchaseToken(oldPurchaseToken)
-                      .build();
-
-              BillingFlowParams flowParams =
-                  BillingFlowParams.newBuilder()
-                      .setProductDetailsParamsList(Collections.singletonList(productDetailsParams))
-                      .setSubscriptionUpdateParams(updateParams)
-                      .build();
-
-              activity.runOnUiThread(() -> billingClient.launchBillingFlow(activity, flowParams));
             });
 
       } else {
@@ -338,16 +354,20 @@ public class GooglePlayProvider implements PaymentProvider, PurchasesUpdatedList
 
     billingClient.queryPurchasesAsync(
         params,
-        (result, purchases) -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            for (Purchase purchase : purchases) {
-              if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                for (String productId : purchase.getProducts()) {
-                  Purchasable product = findProduct(productId);
-                  if (product != null) {
-                    ProductHandler handler = handlers.get(product.getType());
-                    if (handler != null) {
-                      // Handler will sync internally
+        new PurchasesResponseListener() {
+          @Override
+          public void onQueryPurchasesResponse(
+              @NonNull BillingResult result, @NonNull List<Purchase> purchases) {
+            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+              for (Purchase purchase : purchases) {
+                if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                  for (String productId : purchase.getProducts()) {
+                    Purchasable product = findProduct(productId);
+                    if (product != null) {
+                      ProductHandler<?> handler = getHandler(product.getType());
+                      if (handler != null) {
+                        // Handler will sync internally
+                      }
                     }
                   }
                 }
@@ -364,9 +384,12 @@ public class GooglePlayProvider implements PaymentProvider, PurchasesUpdatedList
 
     billingClient.acknowledgePurchase(
         params,
-        result -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            Log.d(TAG, "Purchase acknowledged");
+        new AcknowledgePurchaseResponseListener() {
+          @Override
+          public void onAcknowledgePurchaseResponse(@NonNull BillingResult result) {
+            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+              Log.d(TAG, "Purchase acknowledged");
+            }
           }
         });
   }
@@ -377,9 +400,12 @@ public class GooglePlayProvider implements PaymentProvider, PurchasesUpdatedList
 
     billingClient.consumeAsync(
         params,
-        (result, token) -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            Log.d(TAG, "Purchase consumed");
+        new ConsumeResponseListener() {
+          @Override
+          public void onConsumeResponse(@NonNull BillingResult result, @NonNull String token) {
+            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+              Log.d(TAG, "Purchase consumed");
+            }
           }
         });
   }
@@ -407,12 +433,16 @@ public class GooglePlayProvider implements PaymentProvider, PurchasesUpdatedList
 
     billingClient.queryProductDetailsAsync(
         params,
-        (result, details) -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            for (ProductDetails detail : details.getProductDetailsList()) {
-              productDetailsCache.put(detail.getProductId(), detail);
+        new ProductDetailsResponseListener() {
+          @Override
+          public void onProductDetailsResponse(
+              @NonNull BillingResult result, @NonNull QueryProductDetailsResult details) {
+            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+              for (ProductDetails detail : details.getProductDetailsList()) {
+                productDetailsCache.put(detail.getProductId(), detail);
+              }
+              Log.d(TAG, "Cached " + productDetailsCache.size() + " product details");
             }
-            Log.d(TAG, "Cached " + productDetailsCache.size() + " product details");
           }
         });
   }

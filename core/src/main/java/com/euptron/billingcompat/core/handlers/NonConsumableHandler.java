@@ -2,11 +2,15 @@ package com.euptron.billingcompat.core.handlers;
 
 import android.content.Context;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
 import com.euptron.billingcompat.core.products.NonConsumableProduct;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -70,27 +74,30 @@ public class NonConsumableHandler extends BaseProductHandler<NonConsumableProduc
 
     QueryPurchasesParams params =
         QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build();
+    
+    billingClient.queryPurchasesAsync(params, new PurchasesResponseListener() {
+      @Override
+      public void onQueryPurchasesResponse(@NonNull BillingResult result, @NonNull List<Purchase> purchases) {
+        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+          Log.w(TAG, "Sync failed: " + result.getDebugMessage());
+          return;
+        }
 
-    billingClient.queryPurchasesAsync(params, (result, purchases) -> {
-      if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-        Log.w(TAG, "Sync failed: " + result.getDebugMessage());
-        return;
-      }
-
-      ownedProducts.clear();
-      for (Purchase purchase : purchases) {
-        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-          for (String productId : purchase.getProducts()) {
-            ownedProducts.add(productId);
-            saveBoolean(productId, true);
+        ownedProducts.clear();
+        for (Purchase purchase : purchases) {
+          if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            for (String productId : purchase.getProducts()) {
+              ownedProducts.add(productId);
+              saveBoolean(productId, true);
+            }
           }
         }
-      }
 
-      Log.d(TAG, "Synced " + ownedProducts.size() + " products");
+        Log.d(TAG, "Synced " + ownedProducts.size() + " products");
 
-      if (listener != null) {
-        listener.onPurchasesSynced();
+        if (listener != null) {
+          listener.onPurchasesSynced();
+        }
       }
     });
   }

@@ -3,8 +3,11 @@ package com.euptron.billingcompat.core.handlers;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import com.android.billingclient.api.AcknowledgePurchaseParams;
+import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
 import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
 import com.euptron.billingcompat.core.listeners.PurchaseEventListener;
 import com.euptron.billingcompat.core.products.Purchasable;
@@ -50,16 +53,17 @@ public abstract class BaseProductHandler<T extends Purchasable> implements Produ
         AcknowledgePurchaseParams.newBuilder()
             .setPurchaseToken(purchase.getPurchaseToken())
             .build();
-
-    billingClient.acknowledgePurchase(
-        params,
-        result -> {
-          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            Log.d(TAG, "Purchase acknowledged successfully");
-          } else {
-            Log.e(TAG, "Failed to acknowledge: " + result.getDebugMessage());
-          }
-        });
+    
+    billingClient.acknowledgePurchase(params, new AcknowledgePurchaseResponseListener() {
+      @Override
+      public void onAcknowledgePurchaseResponse(@NonNull BillingResult result) {
+        if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+          Log.d(TAG, "Purchase acknowledged successfully");
+        } else {
+          Log.e(TAG, "Failed to acknowledge: " + result.getDebugMessage());
+        }
+      }
+    });
   }
 
   @Override

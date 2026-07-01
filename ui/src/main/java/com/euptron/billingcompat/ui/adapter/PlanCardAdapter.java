@@ -100,16 +100,18 @@ public class PlanCardAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
       h.recommendedChip.setVisibility(View.GONE);
     }
 
-    h.card.setOnClickListener(
-        v -> {
-          int prev = selectedIndex;
-          selectedIndex = h.getAbsoluteAdapterPosition();
-          notifyItemChanged(prev);
-          notifyItemChanged(selectedIndex);
-          if (listener != null) {
-            listener.onPlanSelected(selectedIndex);
-          }
-        });
+    h.card.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        int prev = selectedIndex;
+        selectedIndex = h.getAbsoluteAdapterPosition();
+        notifyItemChanged(prev);
+        notifyItemChanged(selectedIndex);
+        if (listener != null) {
+          listener.onPlanSelected(selectedIndex);
+        }
+      }
+    });
   }
 
   @Override
