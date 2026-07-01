@@ -9,13 +9,75 @@ A Secure Google Play Billing Wrapper for Android
 
 BillingCompat wraps Google Play Billing Library 9.x with a clean builder API, multi-layered runtime security, and a server-side verification client ready to point at your own backend. Define your products, build the manager, launch a purchase — the parts that usually take a week of integration work are already done.
 
-## Why use this?
+## Why BillingCompat?
 
-Google Play Billing is correct but low-level: you write your own product registries, persist ownership state by hand, reconcile `SharedPreferences` against `queryPurchasesAsync`, and stand up a backend to verify purchase tokens before trusting anything the client tells you. None of that is optional if you want a paywall that survives refunds, patched APKs, and rooted devices — it's just usually built from scratch, once per app.
+[Google Play Billing](https://developer.android.com/google/play/billing/integrate) gives you the building blocks to enable you to sell digital products and content in your Android app, not a finished integration. Every app ends up rebuilding the same things: ownership tracking, refund handling, fraud detection, and server verification. Skip any part of it and your paywall is one bypass from negative **ROI**.
 
-BillingCompat is that integration done once, properly. One builder handles non-consumables, consumables, subscriptions, and pending purchases instead of four separate code paths. Security checks for Lucky Patcher, Frida, Xposed, root, debuggers, emulators, and APK re-signing are built in, not a follow-up ticket. `SSVClient` gives you a ready async client for server-side verification — wire it to any backend that calls the Google Play Developer API. An optional themeable paywall UI is included for when you don't want to build that screen either.
+**BillingCompat** abstracts the complexity of integration into a structured, builder-based API. Define your products once. Configure your handlers once. Launch purchases, check ownership, manage balances, and verify transactions all through clean, readable code.
 
-This is meant to be production infrastructure, not a sample project.
+## Screenshots
+
+<div align="center">
+  <img src="./assets/screen_1.jpg" style="max-width: 100%; height: auto; width: 32%;" alt="Intro Screen"/>
+  <img src="./assets/screen_2.jpg" style="max-width: 100%; height: auto; width: 32%;" alt="Code Editor"/>
+  <img src="./assets/screen_3.jpg" style="max-width: 100%; height: auto; width: 32%;" alt="Breadcrumb Navigation"/>
+</div>
+
+## Features
+
+**Core Module**
+- [x] Non-consumable, consumable, subscription, and pending purchase types
+- [x] Builder-based setup and purchase flow (`BillingConfigBuilder`, `PurchaseBuilder`)
+- [x] Subscription upgrades and downgrades with proration control
+- [x] Configurable offer selection for base plans, trials, and promos
+- [x] Per-product ownership and balance persistence synced against Google Play
+- [x] Runtime threat detection — patchers, Frida, Xposed, debuggers, root, and emulators
+- [x] APK signature verification to catch re-signed and cloned builds
+- [x] Purchase fraud detection by comparing local cache against Google Play state
+- [x] Async server-side verification client with timeout and fallback support
+- [x] Auto-reconnect on billing service disconnect
+- [x] Pending purchase lifecycle handling
+- [x] Consumable balance tracking with atomic spend support
+- [ ] Subscription pause and resume
+- [ ] Installment plan support
+- [ ] Family sharing detection
+
+**UI Module (optional)**
+- [x] Fullscreen paywall `DialogFragment`, zero billing logic
+- [x] Hero image, feature list, and plan cards in one scrollable layout
+- [x] Vertical and horizontal plan card orientation
+- [x] Per-card discount badge and recommended badge
+- [x] Light and dark theme with OLED black dark mode
+- [x] Full color token system, override any token per theme
+- [x] Edge-to-edge with automatic inset handling across API 23 to 35
+- [x] Slide-up and slide-down dialog animation, overridable
+- [ ] Bottom sheet variant
+- [ ] One-time purchase layout
+
+## Installation
+
+BillingCompat is distributed via [JitPack](https://jitpack.io/#euptron/Billing-Compat).
+
+```groovy
+// settings.gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+In your project `app/build.gradle`
+```groovy
+// 
+dependencies {
+    implementation 'com.github.euptron.billing-compat:billingcompat-core:0.0.2'
+    // Paywall UI (Optional)
+    implementation 'com.github.euptron.billing-compat:billingcompat-ui:0.0.2'
+}
+```
 
 ## Quick Start
 
@@ -44,43 +106,6 @@ new PurchaseBuilder(activity, billingManager)
 
 Full setup, listener wiring, and integration details: [core README](core/README.md).
 
-## Features
-
-- Non-consumable, consumable, subscription, and pending purchase support in one unified API
-- Builder-based configuration (`BillingConfigBuilder`) and purchase flow (`PurchaseBuilder`)
-- Subscription upgrades and downgrades with proration, base plans, and configurable offer selection
-- Local ownership and balance persistence per product type, synced against Google Play
-- `IntegrityGuard` for runtime detection of patchers, Frida, Xposed, debuggers, root, and emulators
-- `SecurityGuard` for APK signature verification, to catch re-signed builds
-- `PurchaseFraudGuard` for local-cache-vs-Play purchase state comparison
-- `SSVClient`, an async server-side verification client — bring your own backend
-- Optional `ui` module: a themeable, backend-agnostic paywall `DialogFragment`
-- Built on Google Play Billing Library 9.x
-- MIT licensed
-
-## Installation
-
-BillingCompat is distributed via [JitPack](https://jitpack.io/#euptron/Billing-Compat).
-
-```groovy
-// settings.gradle
-dependencyResolutionManagement {
-    repositories {
-        maven { url 'https://jitpack.io' }
-    }
-}
-```
-
-```groovy
-// app/build.gradle
-dependencies {
-    implementation 'com.github.euptron.billing-compat:core:0.0.1'
-
-    // Optional — themeable paywall UI
-    implementation 'com.github.euptron.billing-compat:ui:0.0.1'
-}
-```
-
 ## Modules
 
 BillingCompat is split into two independent modules. Use either on its own, or both together.
@@ -97,6 +122,9 @@ BillingCompat treats client-side billing state as something to verify, not trust
 `IntegrityGuard` runs runtime environment checks for patching tools (Lucky Patcher, GameGuardian, Freedom, and others), instrumentation frameworks (Frida, Xposed), active debuggers, rooted devices, and emulators. `SecurityGuard` compares the running APK's signing certificate against your release signature to detect re-signed or tampered builds. `PurchaseFraudGuard` and `SSVClient` cross-check local purchase state and verify purchase tokens against the Google Play Developer API through a backend you control — the client-side contract and a reference implementation pattern are documented in the core README so you can stand up your own.
 
 Full details and current implementation behavior: [core README — Security](core/README.md#security).
+
+> [!IMPORTANT]  
+> This project is currently WIP, if you want to contribute, or you found bugs or issues, make a pull request.
 
 ## Support this Project <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Backhand%20Index%20Pointing%20Down.png" alt="Backhand Index Pointing Down" width="25" height="25" />
 

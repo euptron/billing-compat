@@ -32,57 +32,66 @@ class MainActivity : AppCompatActivity() {
     private fun showPaywall() {
         val weeklyPlan =
             SubscriptionPlanUiModel.Builder()
-                .planId("subs_weekly")
-                .label("Weekly")
-                .price("$2.99")
-                .period("/ week")
+                .planId("plan_weekly")
+                .label("Weekly Plan")
+                .price("$ X.XX")
+                .period("/ wk")
                 .recommended(false)
                 .build()
 
         val monthlyPlan =
             SubscriptionPlanUiModel.Builder()
-                .planId("subs_monthly")
-                .label("Monthly")
-                .price("$9.99")
-                .period("/ month")
-                .discountBadge("Save 16%")
+                .planId("plan_monthly")
+                .label("Monthly Plan")
+                .price("$ X.XX")
+                .period("/ mo")
+                .discountBadge("Best Value")
                 .recommended(false)
                 .build()
 
         val yearlyPlan =
             SubscriptionPlanUiModel.Builder()
-                .planId("subs_yearly")
-                .label("Yearly")
-                .price("$24.99")
-                .period("/ year")
-                .discountBadge("Save 16%")
+                .planId("plan_yearly")
+                .label("Yearly Plan")
+                .price("$ X.XX")
+                .period("/ yr")
+                .discountBadge("Best Value")
                 .recommended(true)
                 .build()
 
         val config =
             PaywallConfig.Builder()
-                .appName("Billing Compat")
-                .ctaTitle("Go Pro Today")
+                .appName("My App")
+                .ctaTitle("Upgrade Now")
                 .heroImage(ContextCompat.getDrawable(this, R.drawable.ic_gift_premium))
-                .ctaSubtitle("Unlock everything and grow faster")
+                .ctaSubtitle("Get access to all premium features")
                 .addFeature(
-                    FeatureItemUiModel("Ad 25+ Tools unlocked", "Full access to every feature")
+                    FeatureItemUiModel("Feature One", "Description of the first feature goes here")
                 )
-                .addFeature(FeatureItemUiModel("Unlimited AI Assistant", "No daily message limit"))
+                .addFeature(
+                    FeatureItemUiModel("Feature Two", "Description of the second feature goes here")
+                )
                 .addFeature(
                     FeatureItemUiModel(
-                        "Advanced Competitor Analysis", "Spy on top channels in your niche"
+                        "Feature Three", "Description of the third feature goes here"
                     )
                 )
-                .addFeature(FeatureItemUiModel("Ad-free experience", "Clean ad-free experience"))
-                .addFeature(FeatureItemUiModel("Priority support", "Get help within 24 hours"))
+                .addFeature(
+                    FeatureItemUiModel(
+                        "Feature Four",
+                        "Description of the fourth feature goes here"
+                    )
+                )
+                .addFeature(
+                    FeatureItemUiModel("Feature Five", "Description of the fifth feature goes here")
+                )
                 .addPlan(weeklyPlan)
                 .addPlan(monthlyPlan)
                 .addPlan(yearlyPlan)
-                .featuresCardHeader("What you get")
-                .subscribeCta("Subscribe Now")
-                .restoreLabel("Restore Purchase")
-                .cancelNote("Cancel anytime. No commitments.")
+                .featuresCardHeader("Included Features")
+                .subscribeCta("Start Subscription")
+                .restoreLabel("Restore Purchases")
+                .cancelNote("You can cancel anytime. No long-term commitment.")
                 .planOrientation(PaywallConfig.Orientation.VERTICAL)
                 .defaultSelectedIndex(1)
                 .build()
@@ -91,17 +100,17 @@ class MainActivity : AppCompatActivity() {
             .setCallback(
                 object : PaywallCallback {
                     override fun onSubscribeClicked(plan: SubscriptionPlanUiModel) {
-                        toast("Subscribing to: " + plan.label)
-                        // load billing here
+                        toast("Selected: " + plan.label)
+                        // Initiate purchase flow here
                     }
 
                     override fun onRestoreClicked() {
-                        toast("Restoring purchases...")
-                        // Trigger Google Play purchase query to restore past purchases:
+                        toast("Checking for previous purchases...")
+                        // Query Google Play for existing purchases
                     }
 
                     override fun onDismissed() {
-                        // Optional: log analytics, clear loading states, etc.
+                        // Optional: handle dialog close
                     }
                 })
             .show(supportFragmentManager, "paywall")
