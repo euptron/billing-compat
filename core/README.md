@@ -109,7 +109,7 @@ with the real coordinates:
 ```groovy
 dependencies {
     // TODO: confirm final group/artifact coordinates once published
-    implementation("io.github.euptron:billingcompat-core:0.0.1")
+    implementation("io.github.euptron:billingcompat-core:0.0.4")
 }
 ```
 
@@ -122,7 +122,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation("com.github.euptron:Billing-Compat:0.0.1")
+    implementation("com.github.euptron:Billing-Compat:0.0.4")
 }
 ```
 
@@ -1880,24 +1880,6 @@ always charged with `CHARGE_PRORATED_PRICE` in the current version — see
 
 </details>
 
----
-
-## Migration Guide
-
-This is the first public release (`v0.0.1`) of `BillingCompat — Core`. There is no prior published
-version, and therefore no migration path yet.
-
-When a future release introduces a breaking API change, this section will document it as a
-before/after diff, for example:
-
-```diff
-- void onProductPurchased(Purchasable product);
-+ void onProductPurchased(Purchasable product, String purchaseToken);
-```
-
-along with the rationale and the minimum code change required on your side.
-
----
 
 ## Changelog
 
