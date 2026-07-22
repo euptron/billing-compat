@@ -45,7 +45,7 @@ afterEvaluate {
 
                 groupId = 'com.github.euptron'
                 artifactId = 'billingcompat-core'
-                version = '0.0.2'
+                version = '0.0.4'
 
                 pom {
                     name = 'Billing Compat UI'

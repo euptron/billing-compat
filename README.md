@@ -73,7 +73,7 @@ In your project `app/build.gradle`
 ```groovy
 // 
 dependencies {
-    implementation 'com.github.euptron.billing-compat:billingcompat-core:0.0.2'
+    implementation 'com.github.euptron.billing-compat:billingcompat-core:0.0.4'
     // Paywall UI (Optional)
     implementation 'com.github.euptron.billing-compat:billingcompat-ui:0.0.2'
 }
