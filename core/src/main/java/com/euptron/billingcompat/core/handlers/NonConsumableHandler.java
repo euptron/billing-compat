@@ -8,6 +8,7 @@ import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
+import com.euptron.billingcompat.core.BillingManager;
 import com.euptron.billingcompat.core.products.NonConsumableProduct;
 import java.util.HashSet;
 import java.util.List;
@@ -24,7 +25,7 @@ public class NonConsumableHandler extends BaseProductHandler<NonConsumableProduc
 
   @Override
   protected String getPrefsName() {
-    return "non_consumable_purchases";
+    return BillingManager.PREFS_HANDLER_NON_CONSUMABLE;
   }
 
   @Override

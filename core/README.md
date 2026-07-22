@@ -23,6 +23,7 @@ Built and verified against **Google Play Billing Library 9.1.0**. This is module
 - [Launching Purchases](#launching-purchases)
 - [Listening to Purchase Events](#listening-to-purchase-events)
 - [Checking Ownership](#checking-ownership)
+- [BillingCompat (Static Access)](#billingcompat-static-access)
 - [Subscription Handling](#subscription-handling)
 - [Consumable Balances](#consumable-balances)
 - [Syncing Purchases](#syncing-purchases)
@@ -689,6 +690,79 @@ if (pendingHandler != null) {
 }
 ```
 
+### Any Subscription Plan / A Specific Product
+
+`BillingManager` also exposes plan-aware helpers so you don't have to `OR` together every
+`SubscriptionPlan` yourself:
+
+```java
+// True if the user owns/subscribes to a specific registered product, whatever its type.
+boolean owned = billingManager.hasPurchased("com.myapp.pro_monthly");
+
+// True if ANY subscription plan (weekly/monthly/quarterly/yearly) is currently active.
+boolean subscribed = billingManager.isSubscribed();
+
+// True if this specific plan is active.
+boolean onYearly = billingManager.isSubscribed(SubscriptionPlan.YEARLY);
+
+// The plan currently active, or null.
+SubscriptionPlan plan = billingManager.getActiveSubscriptionPlan();
+```
+
+These read the same state as [Subscription](#subscription) above — `isSubscribed()` /
+`isSubscribed(plan)` delegate to `SubscriptionHandler.isAnyActive()` / `isActive(plan)`, so they
+inherit the same expiry-priority rules described in
+[Subscription Handling](#subscription-handling) and the same cancellation/refund behavior
+described there.
+
+---
+
+## BillingCompat (Static Access)
+
+`BillingManager` is created once via `BillingConfigBuilder` and is usually threaded through your
+app (Application class, DI graph, ViewModel, etc.) so any screen can check entitlement. If you'd
+rather not carry that reference around, `BillingCompat` is a static facade over the same calls:
+
+```java
+// No BillingManager reference needed anywhere below.
+boolean owned      = BillingCompat.hasPurchased("com.myapp.remove_ads");
+boolean subscribed = BillingCompat.isSubscribed();
+boolean onYearly   = BillingCompat.isSubscribed(SubscriptionPlan.YEARLY);
+SubscriptionPlan plan = BillingCompat.getActiveSubscriptionPlan();
+```
+
+`BillingConfigBuilder.build()` calls `BillingCompat.attach(manager)` automatically, so in the
+common single-manager setup there's nothing extra to wire up. If you construct `BillingManager`
+some other way, call `BillingCompat.attach(billingManager)` once yourself (e.g.
+`Application.onCreate()`) before any static call is made.
+
+```java
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        BillingManager billingManager = new BillingConfigBuilder(this)
+            .addProducts(myProducts)
+            .build(); // BillingCompat is attached here automatically
+    }
+}
+
+// Anywhere else in the app, e.g. a Composable, Fragment, or plain util class:
+if (BillingCompat.isSubscribed()) {
+    unlockPremiumContent();
+}
+```
+
+Every `BillingCompat` method is safe to call before a manager is attached — they return
+`false`/`null` instead of throwing. `BillingCompat.getManager()` returns the attached instance (or
+`null`) if you need to drop back down to the full `BillingManager` API. `BillingCompat.detach()`
+clears the reference, which is mainly useful for tests.
+
+> [!NOTE]
+> `BillingCompat` holds a single static reference. If your app builds more than one
+> `BillingManager` (uncommon — most apps have exactly one), the most recently attached one wins;
+> use the instance methods on `BillingManager` directly in that case instead of the static facade.
+
 ---
 
 ## Subscription Handling
@@ -711,15 +785,32 @@ if (handler != null) {
     handler.saveServerExpiry(SubscriptionPlan.MONTHLY, expiryEpochMillis);
 }
 
+// Equivalent to OR-ing isActive() across every SubscriptionPlan yourself.
 private boolean hasActiveSubscription() {
     SubscriptionHandler h = billingManager.getHandler(PurchaseType.SUBSCRIPTION);
-    if (h == null) return false;
-    return h.isActive(SubscriptionPlan.WEEKLY)
-        || h.isActive(SubscriptionPlan.MONTHLY)
-        || h.isActive(SubscriptionPlan.QUARTERLY)
-        || h.isActive(SubscriptionPlan.YEARLY);
+    return h != null && h.isAnyActive(); // or billingManager.isSubscribed()
 }
 ```
+
+### Cancellation and refund detection
+
+A user can end a subscription two ways, and they behave differently:
+
+- **Cancel auto-renew** (from the in-app Play Store deep link, or directly in the Play Store app)
+  — Google Play keeps returning the purchase as `PURCHASED` from `queryPurchasesAsync` until the
+  already-paid period ends. `isActive()` / `isSubscribed()` correctly stay `true` until the stored
+  expiry time passes — this is expected, the user paid for that period.
+- **Refund or immediate revocation** — the purchase stops being returned by
+  `queryPurchasesAsync` right away, before the natural expiry. `SubscriptionHandler.sync()`
+  detects any plan that was previously cached as active but is no longer present in the fresh
+  query result, and clears its cached state (`_active`, `_expiry`, and `_server_expiry` prefs
+  entries) immediately, rather than leaving a stale future expiry in place. This is what makes
+  `isActive()` / `isSubscribed()` trustworthy after a Play Store-side cancellation, not just a
+  local one.
+
+`sync()` runs automatically on `connect()` and whenever you call `billingManager.syncPurchases()`
+(see [Syncing Purchases](#syncing-purchases)) — call it on `onResume()` so revocations made outside
+the app are picked up promptly.
 
 ---
 

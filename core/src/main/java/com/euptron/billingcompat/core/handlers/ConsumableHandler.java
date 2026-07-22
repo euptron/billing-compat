@@ -10,6 +10,7 @@ import com.android.billingclient.api.ConsumeResponseListener;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
+import com.euptron.billingcompat.core.BillingManager;
 import com.euptron.billingcompat.core.products.ConsumableProduct;
 import com.euptron.billingcompat.core.utils.Compatibility;
 import java.util.HashMap;
@@ -27,7 +28,7 @@ public class ConsumableHandler extends BaseProductHandler<ConsumableProduct> {
 
   @Override
   protected String getPrefsName() {
-    return "consumable_balances";
+    return BillingManager.PREFS_HANDLER_CONSUMABLE;
   }
 
   @Override

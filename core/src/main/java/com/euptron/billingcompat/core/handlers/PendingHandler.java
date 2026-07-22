@@ -8,6 +8,7 @@ import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
+import com.euptron.billingcompat.core.BillingManager;
 import com.euptron.billingcompat.core.products.Purchasable;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +24,7 @@ public class PendingHandler extends BaseProductHandler<Purchasable> {
 
   @Override
   protected String getPrefsName() {
-    return "pending_purchases";
+    return BillingManager.PREFS_HANDLER_PENDING;
   }
 
   @Override

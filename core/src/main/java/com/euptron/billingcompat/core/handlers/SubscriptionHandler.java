@@ -10,14 +10,17 @@ import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.QueryPurchasesParams;
+import com.euptron.billingcompat.core.BillingManager;
 import com.euptron.billingcompat.core.model.SubscriptionPlan;
 import com.euptron.billingcompat.core.products.SubscriptionProduct;
 import com.euptron.billingcompat.core.utils.Compatibility;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.json.JSONObject;
 
 public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct> {
@@ -32,7 +35,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
 
   @Override
   protected String getPrefsName() {
-    return "subscriptions";
+    return BillingManager.PREFS_HANDLER_SUBSCRIPTIONS;
   }
 
   @Override
@@ -95,12 +98,14 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
               @NonNull BillingResult result, @NonNull List<Purchase> purchases) {
             if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
               activeSubscriptions.clear();
+              Set<SubscriptionPlan> stillActive = new HashSet<>();
               for (Purchase purchase : purchases) {
                 if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
                   for (String productId : purchase.getProducts()) {
                     SubscriptionPlan plan = SubscriptionPlan.fromProductId(productId);
                     if (plan != null) {
                       activeSubscriptions.put(plan, purchase);
+                      stillActive.add(plan);
                       long expiry = parseExpiryTime(purchase, plan);
                       expiryTimes.put(plan, expiry);
                       saveLong(plan.name() + "_expiry", expiry);
@@ -109,6 +114,18 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
                   }
                 }
               }
+
+              // Google Play no longer returns purchases that were canceled-and-refunded,
+              // revoked, or otherwise invalidated (a plain user cancellation with auto-renew
+              // off is still returned as PURCHASED until the paid period ends, so this only
+              // fires on true revocation). Clear any locally-cached state for those plans so
+              // isActive()/isAnyActive() stop reporting them as owned.
+              for (SubscriptionPlan plan : SubscriptionPlan.values()) {
+                if (!stillActive.contains(plan) && getBoolean(plan.name() + "_active", false)) {
+                  revokePlan(plan);
+                }
+              }
+
               Log.d(TAG, "Synced " + activeSubscriptions.size() + " subscriptions");
 
               if (listener != null) {
@@ -129,6 +146,42 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
     long expiry =
         serverExpiry > 0 ? serverExpiry : Compatibility.getOrDefault(expiryTimes, plan, 0L);
     return System.currentTimeMillis() < expiry;
+  }
+
+  /**
+   * True if the user currently has an active subscription on ANY plan (weekly, monthly,
+   * quarterly, or yearly). Use this for a single "is the user premium" check that doesn't care
+   * which specific plan was purchased.
+   */
+  public boolean isAnyActive() {
+    for (SubscriptionPlan plan : SubscriptionPlan.values()) {
+      if (isActive(plan)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Returns the currently active {@link SubscriptionPlan}, or null if none is active. */
+  public SubscriptionPlan getActivePlan() {
+    for (SubscriptionPlan plan : SubscriptionPlan.values()) {
+      if (isActive(plan)) {
+        return plan;
+      }
+    }
+    return null;
+  }
+
+  /** Clears all locally-cached state for a plan that Play no longer reports as owned. */
+  private void revokePlan(SubscriptionPlan plan) {
+    activeSubscriptions.remove(plan);
+    expiryTimes.remove(plan);
+    saveBoolean(plan.name() + "_active", false);
+    prefs.edit()
+        .remove(plan.name() + "_expiry")
+        .remove(plan.name() + KEY_SERVER_EXPIRY)
+        .apply();
+    Log.d(TAG, "Revoked subscription plan (canceled/refunded/expired): " + plan);
   }
 
   public long getTimeRemaining(SubscriptionPlan plan) {
