@@ -2,6 +2,7 @@ package com.euptron.billingcompat.core;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import com.euptron.billingcompat.core.builders.PurchaseBuilder;
 import com.euptron.billingcompat.core.handlers.ProductHandler;
@@ -160,6 +161,58 @@ public class BillingManager {
       return (SubscriptionHandler) handler;
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------------------------------
+  // Static, Context-only entitlement checks.
+  //
+  // These read persisted subscription state directly from SharedPreferences and do NOT require
+  // a BillingManager instance to exist in the current process. Use these when the code checking
+  // entitlement can't guarantee a BillingManager has already been built this session (e.g. it's
+  // built lazily from a specific "Premium" screen, and some other screen needs to check status
+  // before the user has ever opened that screen — including right after a cold app start, since
+  // the underlying data survives process death).
+  //
+  // They are only as fresh as the last purchase or syncPurchases() that actually ran, from
+  // wherever the real BillingManager instance lives — these do not talk to Play themselves.
+  // ---------------------------------------------------------------------------------------
+
+  /** {@code Context}-only version of {@link #isSubscribed()} — no live instance required. */
+  public static boolean isSubscribed(Context context) {
+    return getActiveSubscriptionPlan(context) != null;
+  }
+
+  /**
+   * {@code Context}-only version of {@link #isSubscribed(SubscriptionPlan)} — no live instance
+   * required.
+   */
+  public static boolean isSubscribed(Context context, SubscriptionPlan plan) {
+    if (context == null || plan == null) return false;
+    return readExpiry(context, plan) > System.currentTimeMillis();
+  }
+
+  /**
+   * {@code Context}-only version of {@link #getActiveSubscriptionPlan()} — no live instance
+   * required.
+   */
+  public static SubscriptionPlan getActiveSubscriptionPlan(Context context) {
+    if (context == null) return null;
+    long now = System.currentTimeMillis();
+    for (SubscriptionPlan plan : SubscriptionPlan.values()) {
+      if (readExpiry(context, plan) > now) {
+        return plan;
+      }
+    }
+    return null;
+  }
+
+  private static long readExpiry(Context context, SubscriptionPlan plan) {
+    SharedPreferences prefs =
+        context
+            .getApplicationContext()
+            .getSharedPreferences(PREFS_HANDLER_SUBSCRIPTIONS, Context.MODE_PRIVATE);
+    long serverExpiry = prefs.getLong(plan.name() + SubscriptionHandler.SUFFIX_SERVER_EXPIRY, 0);
+    return serverExpiry > 0 ? serverExpiry : prefs.getLong(plan.name() + SubscriptionHandler.SUFFIX_EXPIRY, 0);
   }
 
   public boolean isFeatureUnlocked(String productId) {

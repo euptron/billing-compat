@@ -29,8 +29,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
    * subscription state directly off {@code SharedPreferences} (no live {@code BillingManager}
    * required, e.g. before one has been built this process) stays a supported operation rather
    * than requiring callers to hardcode private string literals. The file itself is {@link
-   * BillingManager#PREFS_HANDLER_SUBSCRIPTIONS}. See {@link
-   * com.euptron.billingcompat.core.BillingCompat#isSubscribed(Context)}.
+   * BillingManager#PREFS_HANDLER_SUBSCRIPTIONS}. See {@link BillingManager#isSubscribed(Context)}.
    */
   public static final String SUFFIX_ACTIVE = "_active";
 

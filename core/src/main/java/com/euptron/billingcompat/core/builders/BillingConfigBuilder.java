@@ -1,7 +1,6 @@
 package com.euptron.billingcompat.core.builders;
 
 import android.content.Context;
-import com.euptron.billingcompat.core.BillingCompat;
 import com.euptron.billingcompat.core.BillingManager;
 import com.euptron.billingcompat.core.handlers.ConsumableHandler;
 import com.euptron.billingcompat.core.handlers.NonConsumableHandler;
@@ -127,10 +126,6 @@ public class BillingConfigBuilder {
     // Create manager
     BillingManager manager = new BillingManager(provider, context);
     manager.setListener(listener);
-
-    // Let BillingCompat's static methods delegate to this manager without callers needing to
-    // hold a reference to it.
-    BillingCompat.attach(manager);
 
     // Auto-connect if requested
     if (autoConnect) {

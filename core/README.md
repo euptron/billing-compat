@@ -23,7 +23,7 @@ Built and verified against **Google Play Billing Library 9.1.0**. This is module
 - [Launching Purchases](#launching-purchases)
 - [Listening to Purchase Events](#listening-to-purchase-events)
 - [Checking Ownership](#checking-ownership)
-- [BillingCompat (Static Access)](#billingcompat-static-access)
+- [Static Entitlement Checks (No Instance Required)](#static-entitlement-checks-no-instance-required)
 - [Subscription Handling](#subscription-handling)
 - [Consumable Balances](#consumable-balances)
 - [Syncing Purchases](#syncing-purchases)
@@ -717,76 +717,37 @@ described there.
 
 ---
 
-## BillingCompat (Static Access)
+## Static Entitlement Checks (No Instance Required)
 
-`BillingManager` is created once via `BillingConfigBuilder` and is usually threaded through your
-app (Application class, DI graph, ViewModel, etc.) so any screen can check entitlement. If you'd
-rather not carry that reference around, `BillingCompat` is a static facade over the same calls:
+Every check covered above (`isUnlocked`, `isSubscribed`, `hasPurchased`, `getActiveSubscriptionPlan`)
+is an **instance** method — it needs the `BillingManager` you built via `BillingConfigBuilder`. That's
+fine if that reference is easy to reach (Application class, DI graph, ViewModel), but two situations
+make that awkward:
 
-```java
-// No BillingManager reference needed anywhere below.
-boolean owned      = BillingCompat.hasPurchased("com.myapp.remove_ads");
-boolean subscribed = BillingCompat.isSubscribed();
-boolean onYearly   = BillingCompat.isSubscribed(SubscriptionPlan.YEARLY);
-SubscriptionPlan plan = BillingCompat.getActiveSubscriptionPlan();
-```
+1. You don't want to thread a `BillingManager` reference into every class that needs to gate a
+   feature.
+2. You build the manager lazily — e.g. only when the user opens a specific "Premium" screen — so
+   any *other* screen checking entitlement before that screen has run this session would otherwise
+   have no way to ask, even if the user is already subscribed from a previous session.
 
-`BillingConfigBuilder.build()` calls `BillingCompat.attach(manager)` automatically, so in the
-common single-manager setup there's nothing extra to wire up. If you construct `BillingManager`
-some other way, call `BillingCompat.attach(billingManager)` once yourself (e.g.
-`Application.onCreate()`) before any static call is made.
-
-```java
-public class MyApplication extends Application {
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        BillingManager billingManager = new BillingConfigBuilder(this)
-            .addProducts(myProducts)
-            .build(); // BillingCompat is attached here automatically
-    }
-}
-
-// Anywhere else in the app, e.g. a Composable, Fragment, or plain util class:
-if (BillingCompat.isSubscribed()) {
-    unlockPremiumContent();
-}
-```
-
-Every `BillingCompat` method is safe to call before a manager is attached — they return
-`false`/`null` instead of throwing. `BillingCompat.getManager()` returns the attached instance (or
-`null`) if you need to drop back down to the full `BillingManager` API. `BillingCompat.detach()`
-clears the reference, which is mainly useful for tests.
-
-> [!NOTE]
-> `BillingCompat` holds a single static reference. If your app builds more than one
-> `BillingManager` (uncommon — most apps have exactly one), the most recently attached one wins;
-> use the instance methods on `BillingManager` directly in that case instead of the static facade.
-
-### Checking without a manager ever having been built this session
-
-The methods above still need `BillingCompat.attach()` — direct or via `BillingConfigBuilder.build()`
-— to have run at least once **in the current process**. That's fine if you build the manager in
-`Application.onCreate()`, but if you build it lazily (e.g. only when the user opens a specific
-"Premium" screen), any other screen that checks entitlement *before* that screen has ever run this
-session will get `false`, even if the user is actually subscribed and that's already recorded on
-disk from a previous session.
-
-For that case, use the `Context`-taking overloads. They read the persisted `SharedPreferences`
-state directly and don't require `attach()`/a live manager at all — only that *some* purchase or
-sync wrote the data at some point, in some session:
+For both, `BillingManager` exposes `Context`-only **static** overloads of the same subscription
+checks. They read the persisted `SharedPreferences` state directly and need no live instance at
+all — only that *some* purchase or sync wrote the data at some point, in some session (the
+underlying prefs survive process death, so this works even on a cold app start):
 
 ```java
-// No BillingManager, no BillingCompat.attach() call required first — safe even
-// on a cold app start before any billing connection exists this session.
-boolean subscribed   = BillingCompat.isSubscribed(context);
-boolean onYearly     = BillingCompat.isSubscribed(context, SubscriptionPlan.YEARLY);
-SubscriptionPlan plan = BillingCompat.getActiveSubscriptionPlan(context);
+// No BillingManager reference, no instance built this session required.
+boolean subscribed    = BillingManager.isSubscribed(context);
+boolean onYearly      = BillingManager.isSubscribed(context, SubscriptionPlan.YEARLY);
+SubscriptionPlan plan = BillingManager.getActiveSubscriptionPlan(context);
 ```
 
 These read the same `subscriptions` prefs file and the same `SubscriptionHandler.SUFFIX_ACTIVE` /
 `SUFFIX_EXPIRY` / `SUFFIX_SERVER_EXPIRY` key suffixes that `SubscriptionHandler` itself writes, so
 they stay in sync with the library rather than requiring you to hardcode key strings in app code.
+Java allows a static and an instance method to share a name as long as their parameter lists
+differ, so `isSubscribed()` (instance) and `isSubscribed(Context)` (static) coexist on the same
+class without conflict — call whichever fits the call site.
 
 > [!IMPORTANT]
 > These overloads don't talk to Play themselves — they're exactly as fresh as the last purchase or
