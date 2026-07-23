@@ -24,7 +24,19 @@ import java.util.Set;
 import org.json.JSONObject;
 
 public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct> {
-  private static final String KEY_SERVER_EXPIRY = "_server_expiry";
+  /**
+   * Public prefs-key suffixes for {@link SubscriptionPlan#name()}, exposed so that reading
+   * subscription state directly off {@code SharedPreferences} (no live {@code BillingManager}
+   * required, e.g. before one has been built this process) stays a supported operation rather
+   * than requiring callers to hardcode private string literals. The file itself is {@link
+   * BillingManager#PREFS_HANDLER_SUBSCRIPTIONS}. See {@link
+   * com.euptron.billingcompat.core.BillingCompat#isSubscribed(Context)}.
+   */
+  public static final String SUFFIX_ACTIVE = "_active";
+
+  public static final String SUFFIX_EXPIRY = "_expiry";
+  public static final String SUFFIX_SERVER_EXPIRY = "_server_expiry";
+
   private final Map<SubscriptionPlan, Purchase> activeSubscriptions = new HashMap<>();
   private final Map<SubscriptionPlan, Long> expiryTimes = new HashMap<>();
 
@@ -51,8 +63,8 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
     expiryTimes.put(product.getPlan(), expiry);
 
     // Save to prefs
-    saveLong(product.getPlan().name() + "_expiry", expiry);
-    saveBoolean(product.getPlan().name() + "_active", true);
+    saveLong(product.getPlan().name() + SUFFIX_EXPIRY, expiry);
+    saveBoolean(product.getPlan().name() + SUFFIX_ACTIVE, true);
 
     if (listener != null) {
       listener.onProductPurchased(product, purchase.getPurchaseToken());
@@ -108,8 +120,8 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
                       stillActive.add(plan);
                       long expiry = parseExpiryTime(purchase, plan);
                       expiryTimes.put(plan, expiry);
-                      saveLong(plan.name() + "_expiry", expiry);
-                      saveBoolean(plan.name() + "_active", true);
+                      saveLong(plan.name() + SUFFIX_EXPIRY, expiry);
+                      saveBoolean(plan.name() + SUFFIX_ACTIVE, true);
                     }
                   }
                 }
@@ -121,7 +133,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
               // fires on true revocation). Clear any locally-cached state for those plans so
               // isActive()/isAnyActive() stop reporting them as owned.
               for (SubscriptionPlan plan : SubscriptionPlan.values()) {
-                if (!stillActive.contains(plan) && getBoolean(plan.name() + "_active", false)) {
+                if (!stillActive.contains(plan) && getBoolean(plan.name() + SUFFIX_ACTIVE, false)) {
                   revokePlan(plan);
                 }
               }
@@ -141,7 +153,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
   }
 
   public boolean isActive(SubscriptionPlan plan) {
-    long serverExpiry = getLong(plan.name() + KEY_SERVER_EXPIRY, 0);
+    long serverExpiry = getLong(plan.name() + SUFFIX_SERVER_EXPIRY, 0);
     // Prefer server-confirmed expiry over locally calculated one
     long expiry =
         serverExpiry > 0 ? serverExpiry : Compatibility.getOrDefault(expiryTimes, plan, 0L);
@@ -176,10 +188,10 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
   private void revokePlan(SubscriptionPlan plan) {
     activeSubscriptions.remove(plan);
     expiryTimes.remove(plan);
-    saveBoolean(plan.name() + "_active", false);
+    saveBoolean(plan.name() + SUFFIX_ACTIVE, false);
     prefs.edit()
-        .remove(plan.name() + "_expiry")
-        .remove(plan.name() + KEY_SERVER_EXPIRY)
+        .remove(plan.name() + SUFFIX_EXPIRY)
+        .remove(plan.name() + SUFFIX_SERVER_EXPIRY)
         .apply();
     Log.d(TAG, "Revoked subscription plan (canceled/refunded/expired): " + plan);
   }
@@ -212,7 +224,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
   }
 
   private long parseExpiryTime(Purchase purchase, SubscriptionPlan plan) {
-    long serverExpiry = getLong(plan.name() + KEY_SERVER_EXPIRY, 0);
+    long serverExpiry = getLong(plan.name() + SUFFIX_SERVER_EXPIRY, 0);
 
     if (serverExpiry > 0) {
       Log.d(TAG, "Using REAL server expiry: " + new Date(serverExpiry));
@@ -236,9 +248,9 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
   }
 
   public void saveServerExpiry(SubscriptionPlan plan, long expiryMillis) {
-    saveLong(plan.name() + KEY_SERVER_EXPIRY, expiryMillis);
+    saveLong(plan.name() + SUFFIX_SERVER_EXPIRY, expiryMillis);
     // Also update the main expiry
-    saveLong(plan.name() + "_expiry", expiryMillis);
+    saveLong(plan.name() + SUFFIX_EXPIRY, expiryMillis);
     expiryTimes.put(plan, expiryMillis);
   }
 
@@ -252,7 +264,7 @@ public class SubscriptionHandler extends BaseProductHandler<SubscriptionProduct>
 
   private void loadSubscriptions() {
     for (SubscriptionPlan plan : SubscriptionPlan.values()) {
-      long expiry = getLong(plan.name() + "_expiry", 0);
+      long expiry = getLong(plan.name() + SUFFIX_EXPIRY, 0);
       if (expiry > 0) {
         expiryTimes.put(plan, expiry);
         if (System.currentTimeMillis() < expiry) {

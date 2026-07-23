@@ -1,5 +1,8 @@
 package com.euptron.billingcompat.core;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import com.euptron.billingcompat.core.handlers.SubscriptionHandler;
 import com.euptron.billingcompat.core.model.SubscriptionPlan;
 
 /**
@@ -13,6 +16,14 @@ import com.euptron.billingcompat.core.model.SubscriptionPlan;
  *
  * <p>Every method here is a no-op-safe passthrough: if no manager has been attached yet, they
  * return {@code false}/{@code null} rather than throwing.
+ *
+ * <p>The {@code Context}-taking overloads ({@link #isSubscribed(Context)}, {@link
+ * #isSubscribed(Context, SubscriptionPlan)}, {@link #getActiveSubscriptionPlan(Context)}) read
+ * persisted subscription state directly from {@code SharedPreferences} and don't need {@link
+ * #attach} to have been called at all — they work even before a {@link BillingManager} has been
+ * built anywhere in the current process, since the underlying data survives process death.
+ * They're only as fresh as the last purchase or {@link BillingManager#syncPurchases()} that
+ * actually ran somewhere in the app — these overloads don't themselves talk to Play.
  */
 public final class BillingCompat {
   private static volatile BillingManager manager;
@@ -59,5 +70,46 @@ public final class BillingCompat {
   /** Returns the user's currently active {@link SubscriptionPlan}, or null if none is active. */
   public static SubscriptionPlan getActiveSubscriptionPlan() {
     return manager != null ? manager.getActiveSubscriptionPlan() : null;
+  }
+
+  /**
+   * {@code Context}-only version of {@link #isSubscribed()} — reads persisted state directly, no
+   * {@link #attach} required. See the class doc for when to prefer this over the no-arg version.
+   */
+  public static boolean isSubscribed(Context context) {
+    return getActiveSubscriptionPlan(context) != null;
+  }
+
+  /**
+   * {@code Context}-only version of {@link #isSubscribed(SubscriptionPlan)} — reads persisted
+   * state directly, no {@link #attach} required.
+   */
+  public static boolean isSubscribed(Context context, SubscriptionPlan plan) {
+    if (context == null || plan == null) return false;
+    return readExpiry(context, plan) > System.currentTimeMillis();
+  }
+
+  /**
+   * {@code Context}-only version of {@link #getActiveSubscriptionPlan()} — reads persisted state
+   * directly, no {@link #attach} required.
+   */
+  public static SubscriptionPlan getActiveSubscriptionPlan(Context context) {
+    if (context == null) return null;
+    long now = System.currentTimeMillis();
+    for (SubscriptionPlan plan : SubscriptionPlan.values()) {
+      if (readExpiry(context, plan) > now) {
+        return plan;
+      }
+    }
+    return null;
+  }
+
+  private static long readExpiry(Context context, SubscriptionPlan plan) {
+    SharedPreferences prefs =
+        context
+            .getApplicationContext()
+            .getSharedPreferences(BillingManager.PREFS_HANDLER_SUBSCRIPTIONS, Context.MODE_PRIVATE);
+    long serverExpiry = prefs.getLong(plan.name() + SubscriptionHandler.SUFFIX_SERVER_EXPIRY, 0);
+    return serverExpiry > 0 ? serverExpiry : prefs.getLong(plan.name() + SubscriptionHandler.SUFFIX_EXPIRY, 0);
   }
 }

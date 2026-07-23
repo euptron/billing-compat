@@ -763,6 +763,37 @@ clears the reference, which is mainly useful for tests.
 > `BillingManager` (uncommon — most apps have exactly one), the most recently attached one wins;
 > use the instance methods on `BillingManager` directly in that case instead of the static facade.
 
+### Checking without a manager ever having been built this session
+
+The methods above still need `BillingCompat.attach()` — direct or via `BillingConfigBuilder.build()`
+— to have run at least once **in the current process**. That's fine if you build the manager in
+`Application.onCreate()`, but if you build it lazily (e.g. only when the user opens a specific
+"Premium" screen), any other screen that checks entitlement *before* that screen has ever run this
+session will get `false`, even if the user is actually subscribed and that's already recorded on
+disk from a previous session.
+
+For that case, use the `Context`-taking overloads. They read the persisted `SharedPreferences`
+state directly and don't require `attach()`/a live manager at all — only that *some* purchase or
+sync wrote the data at some point, in some session:
+
+```java
+// No BillingManager, no BillingCompat.attach() call required first — safe even
+// on a cold app start before any billing connection exists this session.
+boolean subscribed   = BillingCompat.isSubscribed(context);
+boolean onYearly     = BillingCompat.isSubscribed(context, SubscriptionPlan.YEARLY);
+SubscriptionPlan plan = BillingCompat.getActiveSubscriptionPlan(context);
+```
+
+These read the same `subscriptions` prefs file and the same `SubscriptionHandler.SUFFIX_ACTIVE` /
+`SUFFIX_EXPIRY` / `SUFFIX_SERVER_EXPIRY` key suffixes that `SubscriptionHandler` itself writes, so
+they stay in sync with the library rather than requiring you to hardcode key strings in app code.
+
+> [!IMPORTANT]
+> These overloads don't talk to Play themselves — they're exactly as fresh as the last purchase or
+> `syncPurchases()` call that ran *somewhere* in the app (this session or a previous one). Whichever
+> screen actually owns the `BillingManager` should still call `syncPurchases()` on `onResume()` (see
+> [Syncing Purchases](#syncing-purchases)) so the persisted state these overloads read stays current.
+
 ---
 
 ## Subscription Handling
